@@ -408,6 +408,38 @@
   .sell-form .btn{align-self:flex-start;margin-top:2px;}
   .sell-form [hidden]{display:none;}
 
+  /* ============ LISTING DETAIL MODAL ============ */
+  .listing-modal{width:760px;}
+  .ld-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+  .ld-gallery{position:relative;background:var(--ink);}
+  .ld-main-image{
+    width:100%;aspect-ratio:1/1;background-size:cover;background-position:center;background-color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ld-main-image svg{width:40%;color:#fff;opacity:.5;}
+  .ld-nav{
+    position:absolute;top:calc(50% - 24px);width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.9);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2);
+  }
+  .ld-nav svg{width:18px;height:18px;color:var(--ink);}
+  .ld-prev{left:12px;}
+  .ld-next{right:12px;}
+  .ld-next svg{transform:rotate(180deg);}
+  .ld-gallery.single-image .ld-nav,
+  .ld-gallery.single-image .ld-thumbs{display:none;}
+  .ld-thumbs{display:flex;gap:8px;padding:10px;flex-wrap:wrap;}
+  .ld-thumb{width:52px;height:52px;border-radius:8px;object-fit:cover;cursor:pointer;opacity:.55;border:2px solid transparent;transition:opacity .15s ease,border-color .15s ease;}
+  .ld-thumb:hover{opacity:.85;}
+  .ld-thumb.active{opacity:1;border-color:var(--teal);}
+  .ld-info{padding:22px 26px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:70vh;}
+  .ld-price-row{display:flex;align-items:center;gap:10px;}
+  .ld-price-row .price{font-size:22px;}
+  .ld-price-row .badge{position:static;}
+  @media (max-width:720px){
+    .listing-modal{width:94vw;}
+    .ld-body{grid-template-columns:1fr;}
+  }
+
   /* ============ RESPONSIVE ============ */
   @media (max-width:1000px){
     .grid{grid-template-columns:repeat(3,1fr);}
@@ -565,6 +597,7 @@
   <symbol id="icon-court" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 4v16M3 12h18" stroke="currentColor" stroke-width="1.4"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
   <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M4 4.5h16v12H8.5L4 20.5V4.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
 </defs>
 </svg>
 
@@ -859,6 +892,32 @@
 </div>
 
 
+<!-- ============ LISTING DETAIL MODAL ============ -->
+<div class="modal listing-modal" id="listingModal" role="dialog" aria-modal="true" aria-label="Listing details">
+  <div class="modal-head">
+    <h3 id="ldTitle">Item</h3>
+    <button class="drawer-close" id="ldClose"><svg><use href="#icon-close"/></svg></button>
+  </div>
+  <div class="ld-body">
+    <div class="ld-gallery">
+      <div class="ld-main-image" id="ldMainImage"></div>
+      <button class="ld-nav ld-prev" id="ldPrev" aria-label="Previous photo"><svg><use href="#icon-chevron"/></svg></button>
+      <button class="ld-nav ld-next" id="ldNext" aria-label="Next photo"><svg><use href="#icon-chevron"/></svg></button>
+      <div class="ld-thumbs" id="ldThumbs"></div>
+    </div>
+    <div class="ld-info">
+      <span class="card-cat" id="ldCat"></span>
+      <div class="ld-price-row">
+        <span class="price" id="ldPrice"></span>
+        <span class="badge cond-badge" id="ldCondition"></span>
+      </div>
+      <p class="mp-desc" id="ldDescription"></p>
+      <div class="mp-meta" id="ldMeta"></div>
+      <div id="ldActionWrap"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><svg><use href="#icon-check"/></svg><span id="toastText">Copied</span></div>
 
 <script>
@@ -1112,7 +1171,7 @@ function renderMarketplace(){
     const icon = listingIcon(l);
     const mine = myListingIds.includes(l.id);
     return `
-    <div class="card" style="transition-delay:${(i%4)*40}ms">
+    <div class="card" style="transition-delay:${(i%4)*40}ms" data-listing-id="${escapeHtml(l.id)}">
       <div class="card-media" style="background:linear-gradient(135deg, ${color}, ${shade(color)})">
         <span class="badge cond-badge">${escapeHtml(l.condition)}</span>
         ${l.images && l.images.length ? `<img src="${l.images[0]}" alt="${escapeHtml(l.title)}" style="width:100%;height:100%;object-fit:cover;">` : `<svg><use href="#${icon}"/></svg>`}
@@ -1158,6 +1217,13 @@ function renderMarketplace(){
       }
     });
   });
+  mpGrid.querySelectorAll('.card').forEach(card=>{
+    card.style.cursor='pointer';
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('button')) return;
+      openListingDetail(card.dataset.listingId);
+    });
+  });
 }
 
 /* ============================================================
@@ -1181,6 +1247,96 @@ if(heroSellBtn) heroSellBtn.addEventListener('click', openSellModal);
 document.getElementById('sellClose').addEventListener('click', closeSellModal);
 sellOverlay.addEventListener('click', closeSellModal);
 document.getElementById('footerSellLink').addEventListener('click', (e)=>{ e.preventDefault(); openSellModal(); });
+
+/* ============================================================
+   LISTING DETAIL MODAL (photo gallery + full info)
+   ============================================================ */
+const overlayEl = document.getElementById('overlay');
+const listingModal = document.getElementById('listingModal');
+const ldMainImage = document.getElementById('ldMainImage');
+const ldThumbs = document.getElementById('ldThumbs');
+const ldGallery = document.querySelector('.ld-gallery');
+let ldImages = [];
+let ldIndex = 0;
+let ldCurrentListing = null;
+
+function showLdImage(i){
+  if(!ldImages.length) return;
+  ldIndex = (i + ldImages.length) % ldImages.length;
+  ldMainImage.style.backgroundImage = `url('${ldImages[ldIndex]}')`;
+  ldThumbs.querySelectorAll('.ld-thumb').forEach((t,idx)=> t.classList.toggle('active', idx===ldIndex));
+}
+
+function openListingDetail(id){
+  const l = marketplaceListings.find(x=>String(x.id)===String(id));
+  if(!l) return;
+  ldCurrentListing = l;
+  ldImages = (l.images && l.images.length) ? l.images : [];
+
+  document.getElementById('ldTitle').textContent = l.title;
+  document.getElementById('ldCat').innerHTML = listingCategoryLabel(l);
+  document.getElementById('ldPrice').textContent = fmt(l.price);
+  document.getElementById('ldCondition').textContent = l.condition;
+  document.getElementById('ldDescription').textContent = l.description || '';
+  document.getElementById('ldDescription').style.display = l.description ? '' : 'none';
+  document.getElementById('ldMeta').textContent = `${l.location ? l.location+' · ' : ''}${timeAgo(l.postedAt)} · ${l.sellerName}`;
+
+  const mine = myListingIds.includes(l.id);
+  const actionWrap = document.getElementById('ldActionWrap');
+  actionWrap.innerHTML = mine
+    ? `<button class="mp-remove" data-id="${l.id}">Remove listing</button>`
+    : `<button class="btn btn-primary" id="ldContactBtn">Contact Seller</button>
+       <div class="contact-reveal" id="ldContactReveal" hidden>
+         <span class="mono">${escapeHtml(l.contactMethod)}: ${escapeHtml(l.contactValue)}</span>
+         <button class="copy-btn" id="ldCopyBtn">Copy</button>
+       </div>`;
+  if(mine){
+    actionWrap.querySelector('.mp-remove').addEventListener('click', ()=>{ removeListing(l.id); closeListingDetail(); });
+  }else{
+    document.getElementById('ldContactBtn').addEventListener('click', ()=>{
+      document.getElementById('ldContactReveal').hidden = false;
+    });
+    document.getElementById('ldCopyBtn').addEventListener('click', async ()=>{
+      try{ await navigator.clipboard.writeText(l.contactValue); showToast('Contact info copied'); }
+      catch(e){ showToast('Could not copy — select the text manually'); }
+    });
+  }
+
+  if(ldImages.length){
+    ldMainImage.innerHTML = '';
+    ldGallery.classList.remove('single-image');
+    if(ldImages.length===1) ldGallery.classList.add('single-image');
+    ldThumbs.innerHTML = ldImages.map((src,idx)=>`<img class="ld-thumb" src="${src}" data-index="${idx}">`).join('');
+    ldThumbs.querySelectorAll('.ld-thumb').forEach(t=>{
+      t.addEventListener('click', ()=> showLdImage(Number(t.dataset.index)));
+    });
+    showLdImage(0);
+  }else{
+    ldGallery.classList.add('single-image');
+    ldThumbs.innerHTML = '';
+    ldMainImage.style.backgroundImage = 'none';
+    ldMainImage.innerHTML = `<svg><use href="#${listingIcon(l)}"/></svg>`;
+  }
+
+  overlayEl.classList.add('open');
+  listingModal.classList.add('open');
+}
+
+function closeListingDetail(){
+  overlayEl.classList.remove('open');
+  listingModal.classList.remove('open');
+}
+
+document.getElementById('ldClose').addEventListener('click', closeListingDetail);
+overlayEl.addEventListener('click', closeListingDetail);
+document.getElementById('ldPrev').addEventListener('click', ()=> showLdImage(ldIndex-1));
+document.getElementById('ldNext').addEventListener('click', ()=> showLdImage(ldIndex+1));
+document.addEventListener('keydown', (e)=>{
+  if(!listingModal.classList.contains('open')) return;
+  if(e.key==='Escape') closeListingDetail();
+  if(e.key==='ArrowLeft') showLdImage(ldIndex-1);
+  if(e.key==='ArrowRight') showLdImage(ldIndex+1);
+});
 
 fCat.addEventListener('change', ()=>{
   const v = fCat.value;
