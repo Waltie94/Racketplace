@@ -32,6 +32,25 @@ function body(req){
 }
 function clean(s,max=255){return String(s??'').trim().slice(0,max);}
 function sellerToken(){ return crypto.randomBytes(24).toString('hex'); }
+function cleanImages(arr){
+  if(!Array.isArray(arr)) return [];
+  return arr
+    .filter(s => typeof s==='string' && /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 2_000_000)
+    .slice(0,5);
+}
+const VALID_CATS = new Set(['racket','ball','bag','shoe','apparel','accessory']);
+const VALID_CONDITIONS = new Set(['New (Unused)','Like New','Excellent','Good','Fair']);
+
+// Very light in-memory rate limit: max 8 new listings per IP per hour.
+const postTimestamps = new Map();
+function rateLimited(ip){
+  const now = Date.now();
+  const windowMs = 60*60*1000;
+  const hits = (postTimestamps.get(ip)||[]).filter(t => now-t < windowMs);
+  hits.push(now);
+  postTimestamps.set(ip, hits);
+  return hits.length > 8;
+}
 
 async function route(req,res){
   const u=new URL(req.url,`http://${req.headers.host}`);
@@ -41,21 +60,25 @@ async function route(req,res){
 
   if(req.method==='POST' && u.pathname==='/api/listings'){
     try{
+      const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+      if(rateLimited(ip)) return json(res,429,{error:'Too many listings posted recently — please try again later'});
       const b=await body(req);
       const price=Number(b.price);
       if(!b.title || !b.sellerName || !b.contactValue || !Number.isFinite(price) || price<=0)
         return json(res,400,{error:'Missing required listing information'});
       const db=readDB();
       const token=sellerToken();
+      const cat = clean(b.cat,30);
+      const condition = clean(b.condition,30);
       const listing={
         id: clean(b.id,80),
         title:clean(b.title,100),
-        cat:clean(b.cat,30),
+        cat: VALID_CATS.has(cat) ? cat : 'accessory',
         sport:b.sport?clean(b.sport,30):null,
         gender:b.gender?clean(b.gender,30):null,
-        condition:clean(b.condition,30),
+        condition: VALID_CONDITIONS.has(condition) ? condition : 'Good',
         price:Math.round(price*100)/100,
-        images:Array.isArray(b.images)?b.images.slice(0,5):[],
+        images:cleanImages(b.images),
         description:clean(b.description,1000),
         location:clean(b.location,120),
         sellerName:clean(b.sellerName,100),
