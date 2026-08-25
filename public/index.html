@@ -716,32 +716,6 @@
   </div>
 </div>
 
-<!-- ============ TESTIMONIALS ============ -->
-<div class="wrap section">
-  <div class="section-head reveal">
-    <div>
-      <h2 class="display">From the club WhatsApp groups</h2>
-      <p class="sub">A few notes from players around the country. (Sample reviews — swap in your own once you're live.)</p>
-    </div>
-  </div>
-  <div class="testi-grid reveal">
-    <div class="testi">
-      <div class="stars">★★★★★</div>
-      <p>"Switched to the Vertex Carbon 3K after borrowing one at a tournament. Softer on the elbow, still hits like a rock."</p>
-      <footer>— Kayla M., Constantia Padel Club</footer>
-    </div>
-    <div class="testi">
-      <div class="stars">★★★★★</div>
-      <p>"Ordered on a Tuesday, playing with the new grips by Thursday. Easiest gear order I've made all year."</p>
-      <footer>— Devon P., Paarl Padel Social</footer>
-    </div>
-    <div class="testi">
-      <div class="stars">★★★★☆</div>
-      <p>"The Tour Backpack fits two paddles, shoes and a full kit with room to spare. Exactly what our league needed."</p>
-      <footer>— Nadia R., Joburg Padel League</footer>
-    </div>
-  </div>
-</div>
 
 <!-- ============ NEWSLETTER ============ -->
 <div class="news" id="news">
@@ -796,8 +770,6 @@
       <div class="foot-col">
         <h4>Help</h4>
         <ul>
-          <li><a href="#">Shipping &amp; delivery</a></li>
-          <li><a href="#">Returns &amp; exchanges</a></li>
           <li><a href="#" id="sizeGuideLink">Size guide</a></li>
           <li><a href="#marketplace">Buy secondhand gear</a></li>
           <li><a href="mailto:vanderwathwalter1@gmail.com">Contact us</a></li>
@@ -1236,7 +1208,7 @@ function renderMarketplace(){
     <div class="card" style="transition-delay:${(i%4)*40}ms" data-listing-id="${escapeHtml(l.id)}">
       <div class="card-media" style="background:linear-gradient(135deg, ${color}, ${shade(color)})">
         <span class="badge cond-badge">${escapeHtml(l.condition)}</span>
-        ${l.images && l.images.length ? `<img src="${l.images[0]}" alt="${escapeHtml(l.title)}" style="width:100%;height:100%;object-fit:contain;">` : `<svg><use href="#${icon}"/></svg>`}
+        ${l.images && l.images.length ? `<img src="${escapeHtml(l.images[0])}" alt="${escapeHtml(l.title)}" style="width:100%;height:100%;object-fit:contain;">` : `<svg><use href="#${icon}"/></svg>`}
       </div>
       <div class="card-body">
         <span class="card-cat">${listingCategoryLabel(l)}${mine ? ' · <span class="mp-mine-tag">Your listing</span>' : ''}</span>
@@ -1368,7 +1340,7 @@ function openListingDetail(id){
     ldMainImage.innerHTML = '';
     ldGallery.classList.remove('single-image');
     if(ldImages.length===1) ldGallery.classList.add('single-image');
-    ldThumbs.innerHTML = ldImages.map((src,idx)=>`<img class="ld-thumb" src="${src}" data-index="${idx}">`).join('');
+    ldThumbs.innerHTML = ldImages.map((src,idx)=>`<img class="ld-thumb" src="${escapeHtml(src)}" data-index="${idx}">`).join('');
     ldThumbs.querySelectorAll('.ld-thumb').forEach(t=>{
       t.addEventListener('click', ()=> showLdImage(Number(t.dataset.index)));
     });
